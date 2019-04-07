@@ -6,3 +6,5 @@ Research project involved building a bioinformatic pipeline to analyse microarra
 
 Basic steps of the pipeline are shown in the diagram (.png file).
 
+R scripts are located in 'R scripts bioinformatics' file. 
+
