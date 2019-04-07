@@ -1,0 +1,185 @@
+### scripts for graphs contained in figure 1.3 ###########
+########### TEER graph ###################
+samplesnames <-c("Untreated", "Benzoate", "Hippurate")
+group.colours <- c(Untreated = "blue", Benzoate = "red", Hippurate = "green")
+values <- c(100, 101.37, 142.36)
+SEM <- c(6.02, 2.54, 12.37)
+TEERdata <- data.frame(samplesnames, values)
+TEERdata$samplesnames <- factor(TEERdata$samplesnames, levels= c("Untreated", "Benzoate", "Hippurate"))
+p <- ggplot(TEERdata, aes(samplesnames, values))
+p +geom_bar(stat = "identity", aes(fill=samplesnames)) + xlab(NULL) + ylab("TEER (reported as a percentage of baseline)") + guides(fill = guide_legend(title = "Metabolites")) + ggtitle ("A)") + theme(axis.text = element_text(size = 14)) + theme(axis.title = element_text(size = 14)) + scale_fill_manual(values = group.colours)+ geom_errorbar(aes(ymin=values-SEM, ymax=values+SEM), colour="black", width=.2)
+###### paracellular permeability graphs #####
+PPvalues <- c(100, 122.20, 80.60)
+PPSEM <- c(1.25, 2.71, 3.80)
+PPdata <- data.frame (samplesnames, PPvalues, PPSEM)
+p <- ggplot(PPdata, aes(samplesnames, PPvalues))
+p +geom_bar(stat = "identity", width = 0.5, aes(fill=samplesnames))+ xlab(NULL) + ylab("Paracellular permeability(reported as a percentage of baseline)") + guides(fill = guide_legend(title = "Metabolites")) + ggtitle ("B)")+ scale_y_continuous(breaks = c(20,40,60,80,100,120,140)) + theme(axis.text = element_text(size = 14)) + theme(axis.title = element_text(size = 12)) + scale_fill_manual(values = group.colours)+ geom_errorbar(aes(ymin=PPvalues-PPSEM, ymax=PPvalues+PPSEM), colour="black", width=.2)
+########## transporter expression graphs #################
+valueslrp1 <- c(100, 62.61, 100.27)
+SEMlrp1 <- c(7.29, 11.89, 7.27)
+valuesbcrp <- c(100, 85.00, 105.12)
+SEMbcrp <- c(15.08, 7.55, 4.02)
+valuespgp <- c(100, 106.62, 113.16)
+SEMpgp <- c(19.44, 4.43, 6.27)
+Transporterexpressiondata <- data.frame (samplesnames, valueslrp1, SEMlrp1, valuesbcrp, SEMbcrp, valuespgp, SEMpgp)
+p <- ggplot(histdataframe, (aes(x=amsamplenames, y=amvalues, fill=variablemetabolite)))
+p <- p + geom_bar(stat = "identity", position = "dodge") + xlab(NULL) + ylab("Transporter Expression (% of untreated MFI)") + guides(fill = guide_legend(title ="Metabolites")) + ggtitle ("c)") + scale_y_continuous(breaks= c(20,40,60,80,100,120)) + scale_fill_manual(values = c("royalblue1", "tomato1", "limegreen","royalblue1", "tomato1", "limegreen","royalblue1", "tomato1", "limegreen")) + geom_errorbar(aes(ymin=amvalues-SEMvalues, ymax=amvalues+SEMvalues),position = position_dodge(width = 0.9), colour="black", width=.2)
+########## scripts for data analysis for all 6 metabolites #######
+############ read in targets file ################
+targets <- readTargets("target.txt")
+##### read raw array files in using targets file #####
+x <- read.maimages(targets, source="agilent", green.only = TRUE)
+##### drawing a boxplot of raw data all metabolites #######
+boxplot(log2(x$E)~col(x$E),col= c("blue", "blue", "blue", "blue", "purple", "purple", "purple", "purple", "red", "red", "red", "red", "green", "green", "green", "green", "yellow", "yellow", "yellow", "yellow", "orange", "orange", "orange", "orange"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of raw data all metabolites")
+######### drawing an MDS plot of raw data all metabolites #######
+plotMDS(x$E, pch = 19, col= c("blue", "blue", "blue", "blue", "purple", "purple", "purple", "purple", "red", "red", "red", "red", "green", "green", "green", "green", "yellow", "yellow", "yellow", "yellow", "orange", "orange", "orange", "orange"), main = "MDS plot of raw data all metabolites")
+legend("topright", inset = c(-0.4, 0), legend = c("Control", "Acetate", "Benzoate", "Hippurate", "Glucuronide", "Cresol sulfate"), col = c("blue", "purple", "red", "green", "yellow", "orange"), pch = 19, title = "Metabolite", cex = 0.75)
+############# write raw data to file ######################
+write.table(x, file ="RAW/raw.txt", sep ="\t")
+########### draw 24 pseudo MA plots raw data ##################
+E <-log2(x$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAlist", list(M=E, A=A))
+plotMA3by2(MA)
+
+############## processing of data ################
+################## background correct #################
+y <- backgroundCorrect(x, method = "normexp", offset = 50)
+###### boxplot of background corrected data all metabolites #####
+boxplot(log2(y$E)~col(y$E), col= c("blue", "blue", "blue", "blue", "purple", "purple", "purple", "purple", "red", "red", "red", "red", "green", "green", "green", "green", "yellow", "yellow", "yellow", "yellow", "orange", "orange", "orange", "orange"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of background corrected data all metabolites")
+################ normalization ########################
+y <- normalizeBetweenArrays(y, method = "cyclicloess", targets=NULL, cyclic.method = "pairs")
+####### boxplot of normalized data all metabolites ##########
+> boxplot((y$E)~col(y$E), col= c("blue", "blue", "blue", "blue", "purple", "purple", "purple", "purple", "red", "red", "red", "red", "green", "green", "green", "green", "yellow", "yellow", "yellow", "yellow", "orange", "orange", "orange", "orange"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of normalized data all metabolites")
+###### scripts for data analysis (benzoate vs control arrays)#####
+########## read in targets file ###########
+targets <- readTargets("target.txt")
+######## only include control and benzoate in targets file ########
+targets <- targets[grep('Control|Benzoate', targets$SampleName), ]
+######### read in raw FE files of control and benzoate ##########
+x <- read.maimages(targets, source="agilent", green.only = TRUE)
+###### boxplot of raw data benzoate vs control ##########
+boxplot(log2(x$E)~col(x$E), col= c("blue", "blue", "blue", "blue","red", "red", "red", "red"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of raw data benzoate vs control")
+####### MDS plot of raw data benzoate vs control ######
+plotMDS(x$E, pch = 19, col=c("blue", "blue", "blue", "blue", "red", "red", "red", "red"), main="MDS plot raw data benzoate vs control")
+legend("topright", legend = c("Control", "Benzoate"), col = c("blue", "red"), pch=15, cex=0.75)
+###### pseudo MA plots raw data benzoate vs control ########
+E <-log2(x$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAList", list(M=E, A=A))
+plotMA3by2(MA)
+############## processing of data ################
+################## background correct #################
+y <- backgroundCorrect(x, method = "normexp", offset = 50)
+#### boxplot of background corrected data benzoate vs control ######
+boxplot(log2(y$E)~col(y$E), col= c("blue", "blue", "blue", "blue","red", "red", "red", "red"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of background corrected data benzoate vs control")
+#### MDS plot of background corrected data benzoate vs control###
+plotMDS(y$E, pch = 19, col=c("blue", "blue", "blue", "blue", "red", "red", "red", "red"), main="MDS plot background corrected data benzoate vs control")
+legend("topright", legend = c("Control", "Benzoate"), col = c("blue", "red"), pch=15, cex=0.75)
+## pseudo MA plots background corrected data benzoate vs control ###
+E <-log2(y$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAList", list(M=E, A=A))
+plotMA3by2(MA)
+################ normalization ########################
+y <- normalizeBetweenArrays(y, method = "cyclicloess", targets=NULL, cyclic.method = "pairs")
+#### boxplot of normalized data benzoate vs control #####
+boxplot((y$E)~col(y$E), col= c("blue", "blue", "blue", "blue","red", "red", "red", "red"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of normalized data benzoate vs control")
+########### MDS plot of normalized data benzoate vs control #####
+plotMDS(y$E, labels = targets$SampleName, main = "MDS plot of normalized data benzoate vs control")
+legend("topright", legend = c("Control", "Benzoate"), col = c("blue", "red"), pch=15, cex=0.75)
+###### pseudo MA plots normalized data benzoate vs control #######
+E <-log2(y$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAList", list(M=E, A=A))
+plotMA3by2(MA)
+
+##### scripts for data analyses (hippurate vs control arrays)#####
+##########read in targets file ###########
+targets <- readTargets("target.txt")
+##### only include control and hippurate in targets file ########
+targets <- targets[grep('Control|Hippurate', targets$SampleName), ]
+####### read in raw FE files of control and hippurate #####
+x <- read.maimages(targets, source="agilent", green.only = TRUE)
+########## boxplot of raw data hippurate vs control ###############
+boxplot(log2(x$E)~col(x$E), col= c("blue", "blue", "blue", "blue","green", "green", "green", "green"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of raw data hippurate vs control")
+#########MDS plot of raw data hippurate vs control ################
+plotMDS(x$E, labels = targets$SampleName, main = "MDS plot of raw data hippurate vs control")
+######## pseudo MA plots raw data hippurate vs control ############
+E <-log2(x$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAList", list(M=E, A=A))
+plotMA3by2(MA)
+############## processing of data ################
+################## background correct #################
+y <- backgroundCorrect(x, method = "normexp", offset = 50)
+#### boxplot of background corrected data hippurate vs control ###
+boxplot(log2(y$E)~col(y$E), col= c("blue", "blue", "blue", "blue","green", "green", "green", "green"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of background corrected data hippurate vs control")
+### MDS plot of background corrected data hippurate vs control ###
+plotMDS(y$E, pch = 19, col=c("blue", "blue", "blue", "blue", "green", "green", "green", "green"), main="MDS plot background corrected data hippurate vs control")
+legend("topleft", legend = c("Control", "Hippurate"), col = c("blue", "green"), pch=15, cex=0.75)
+###pseudo MA plots background corrected data hippurate vs control ##
+E <-log2(y$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAList", list(M=E, A=A))
+plotMA3by2(MA)
+######## normalization ###########
+y <- normalizeBetweenArrays(y, method = "cyclicloess", targets=NULL, cyclic.method = "pairs")
+#### boxplot of normalized data hippurate vs control ########
+boxplot((y$E)~col(y$E), col= c("blue", "blue", "blue", "blue","green", "green", "green", "green"), names = targets$SampleName, las =2, ylab = 'E', main = "Boxplot of normalized data hippurate vs control")
+#### MDS plot of normalized data hippurate vs control ###########
+plotMDS(y$E, pch = 19, col=c("blue", "blue", "blue", "blue", "green", "green", "green", "green"), main="MDS plot normalized data hippurate vs control")
+legend("topleft", legend = c("Control", "Hippurate"), col = c("blue", "green"), pch=15, cex=0.75)
+#######pseudo MA plots normalized data hippurate vs control ########
+E <-log2(y$E)
+A <-matrix(rowMeans(E),nrow(E),ncol(E))
+MA <- new("MAList", list(M=E, A=A))
+plotMA3by2(MA)
+########### updating array probe annotations ####################
+#### upload the file from the company called all annotations ######
+input_list <- read.table('AllAnnotations_072363_D_AA_20150612 (1).txt', header=T, sep='\t')
+##add a column to q$genes called feature number, give it a numerical sequence from 1 #####
+q$genes$FeatureNumber <- seq(1, dim(q$genes)[1], 1)
+##### adding the two columns called probe name and feature number to the input file ##########
+probename.probeid <- merge(q$genes[,c(4,6)], input_list, by.x='ProbeName', by.y='ProbeID', all=T)
+###### order the table by feature number ###########
+probename.probeid <- probename.probeid[order(probename.probeid$FeatureNumber),]
+###go to NCBI downloads https://www.ncbi.nlm.nih.gov/home/download/##
+###click on 'FTP' 'download data from the NCBI FTP site'######
+######## click on gene, because we want gene #########
+#### go to read me doc, to see where homo sapiens gene files is ####
+###### find 'Homo_sapiens.ags.gz' Homo sapiens only ############
+##### download and unzip using 7 zip file manager #############
+### now its downloaded and in notepad form, take out all ' and " and replaced them with another symbol as R doesnt like '" ########
+q$genes <- probename.probeid
+### corn oil data analyses downloaded from http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-33005 ###
+
+SDRF <- read.delim("E-GEOD-33005.sdrf.txt",check.names=FALSE,stringsAsFactors=FALSE)
+############ read raw files in ############
+x <- read.maimages(SDRF[,"Array Data File"],source="agilent",green.only=TRUE)
+############ background correct #############
+y <- backgroundCorrect(x,method="normexp")
+########## normalization ###########
+y <- normalizeBetweenArrays(y,method="quantile")
+######### removing controls and low expressed probes #########
+neg95 <- apply(y$E[y$genes$ControlType==-1,],2,function(x) quantile(x,p=0.95))
+cutoff <- matrix(1.1*neg95,nrow(y),ncol(y),byrow=TRUE)
+isexpr <- rowSums(y$E > cutoff) >= 4
+table(isexpr)
+y0 <- y[y$genes$ControlType==0 & isexpr,]
+############# MDS plots of corn oil 10ml/kg ##########
+plotMDS(y0$E, labels = SDRF$`Characteristics[treatment]`, pch = 19, col=c("green", "green", "blue", "blue", "blue", "green","green", "green", "blue", "blue"), main = "MDS plot of normalized data")
+############# making a design matrix ##############
+Treatment <- SDRF[,"Characteristics[treatment]"]
+levels <- c("10 ml/kg saline","2 ml/kg corn oil","5 ml/kg corn oil","10 ml/kg corn oil")
+Treatment <- factor(Treatment,levels=levels)
+design <- model.matrix(~Treatment)
+fit <- lmFit(y0,design)
+fit <- eBayes(fit,trend=TRUE)
+yave <- avereps(y0,ID=y0$genes[,"SystematicName"])
+fit <- lmFit(yave,design)
+fit <- eBayes(fit,trend=TRUE)
+summary(decideTests(fit[,-1])) ############ output top.table ###########
+topTable.out <- topTable(fit, adjust =”BH”, coef =1 number Inf)
+topTable.out <- topTable.out[order(topTable.out$adj.P.Val, ]
+topTable.out[topTable.out$adj.P.Val<0.2, ]
